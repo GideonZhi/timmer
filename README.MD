@@ -13,6 +13,8 @@ Changelog:
 
 Code could probably still use a bunch of cleanup but absolute first goal was just to get it building on a non-Windows platform.
 
+Building on linux: `dotnet build` in repo root. Windows is probably similar?
+
 Use: `timmer [extract|insert] [opts]`
 
 
