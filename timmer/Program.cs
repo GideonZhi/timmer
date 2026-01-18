@@ -39,6 +39,8 @@ namespace timmer
             [Option('t', "timdata", Required = false, HelpText = "Position of tim data.")]
             public string TimPos { get; set; }
 
+            [Option('s', "stp", Required = false, Default = false, HelpText = "Whether or not to use STP. Defaults false")]
+            public bool STP { get; set; }
 
         }
 
@@ -68,6 +70,9 @@ namespace timmer
 
             [Option('m', "mask", Required = false, HelpText = "Mask to use when inserting pixels.")]
             public uint Mask { get; set; }
+
+            [Option('s', "stp", Required = false, Default = false, HelpText = "Whether or not to use STP. Defaults false")]
+            public bool STP { get; set; }
         }
 
         class TIMEntry
@@ -133,7 +138,7 @@ namespace timmer
                             br.BaseStream.Seek(timPos, SeekOrigin.Begin);
                             try
                             {
-                                TIM tim = new TIM(br, true);
+                                TIM tim = new TIM(br, opts.STP);
                                 string filename = item + "." + i.ToString("D4") + ".png";
                                 tim.ExportPNG(filename);
                             }
@@ -227,7 +232,7 @@ namespace timmer
                                     br.BaseStream.Seek(timPos, SeekOrigin.Begin);
                                     try
                                     {
-                                        TIM tim = new TIM(br, true);
+                                        TIM tim = new TIM(br, opts.STP);
                                         tim.ImportImage(graphicFilenameToInsert);
                                         tims.Add(new TIMEntry
                                         {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using SkiaSharp;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
 
@@ -21,8 +21,8 @@ namespace timmer
     
     public class CLUT
     {
-        public List<Color> colors = new List<Color>();
-        public List<int[]> numbers = new List<int[]>();
+        public List<SKColor> colors = new List<SKColor>();
+        public List<byte[]> numbers = new List<byte[]>();
     }
 
     public class TIM
@@ -32,8 +32,8 @@ namespace timmer
         RECT crect;     /* CLUT rectangle on frame buffer */
         uint ccount;    /* number of cluts */
         ushort[] cdata; /* clut data */
-        List<int[]> acolors = new List<int[]>();
-        List<CLOSEST> ccolors = new List<CLOSEST>();
+        List<byte[]> acolors = [];
+        List<CLOSEST> ccolors = [];
         uint psize;     /* length of entire pixel block including psize */
         RECT prect;     /* texture image rectangle on frame buffer */
         byte[] pdata;   /* pixel data */
@@ -150,14 +150,14 @@ namespace timmer
             this.cdata = cdata;
             this.pdata = pdata;
 
-            acolors = new List<int[]>();
+            acolors = new List<byte[]>();
             for (int i = 0; i < cdata.Length; i++)
             {
                 acolors.Add(ColorToArray(RGBAToColor(cdata[i])));
             }
         }
 
-        void ReadTIM(BinaryReader aTim, bool useSTP = true)
+        void ReadTIM(BinaryReader aTim, bool useSTP = false)
         {
             this.useSTP = useSTP;
 
@@ -298,7 +298,7 @@ namespace timmer
         }
 
         // Thanks Hilltop for helping me with code!
-        int GetClosestColor(int[] targetColor, int clutIdx)
+        int GetClosestColor(byte[] targetColor, int clutIdx)
         {
             for (int i = 0; i < ccolors.Count; i++)
             {
@@ -337,7 +337,7 @@ namespace timmer
             return closestColorIdx;
         }
 
-        double GetRGBDistance(int[] color1, int[] color2)
+        double GetRGBDistance(byte[] color1, byte[] color2)
         {
             double sumSquared = 0;
             for (int i = 0; i < 3; i++)
@@ -348,7 +348,7 @@ namespace timmer
             return Math.Sqrt(sumSquared);
         }
 
-        int GetAlphaFromSTP(int c)
+        byte GetAlphaFromSTP(int c)
         {
             // I'm just gonna go with translucent processing on ;_;
             /* STP/R,G,B    Translucent processing on   Translucent processing off
@@ -360,7 +360,7 @@ namespace timmer
 
             int stp = ((c & 0x8000) >> 15);
 
-            int a = 255;
+            byte a = 255;
             if (useSTP)
             {
                 if (stp == 0 && (c & 0x7FFF) == 0)
@@ -372,32 +372,32 @@ namespace timmer
         }
 
 
-        int[] ColorToArray(Color c)
+        byte[] ColorToArray(SKColor c)
         {
-            return new int[] { c.R, c.G, c.B, c.A };
+            return new byte[] { c.Red, c.Green, c.Blue, c.Alpha };
         }
 
-        Color ArrayToColor(int[] c)
+        SKColor ArrayToColor(byte[] c)
         {
-            return Color.FromArgb(c[3], c[0], c[1], c[2]);
+            return new SKColor(c[3], c[0], c[1], c[2]);
         }
 
-        Color RGBAToColor(int c)
+        SKColor RGBAToColor(int c)
         {
-            int r = (c & 0x1f) << 3;
-            int g = ((c & 0x3e0) >> 5) << 3;
-            int b = ((c & 0x7C00) >> 10) << 3;
-            int a = GetAlphaFromSTP(c);
+            byte r = (byte)((c & 0x1f) << 3);
+            byte g = (byte)(((c & 0x3e0) >> 5) << 3);
+            byte b = (byte)(((c & 0x7C00) >> 10) << 3);
+            byte a = GetAlphaFromSTP(c);
 
-            return Color.FromArgb(a, r, g, b);
+            return new SKColor(a, r, g, b);
         }
 
-        ushort ColorToRGBA(Color color)
+        ushort ColorToRGBA(SKColor color)
         {
-            int r = color.R >> 3;
-            int g = color.G >> 3;
-            int b = color.B >> 3;
-            int a = color.A;
+            int r = color.Red >> 3;
+            int g = color.Green >> 3;
+            int b = color.Blue >> 3;
+            int a = color.Alpha;
 
             ushort c = (ushort)r;
             c |= (ushort)(g << 5);
@@ -411,12 +411,12 @@ namespace timmer
             return c;
         }
 
-        public Bitmap[] Export4Bpp()
+        public SKBitmap[] Export4Bpp()
         {
-            List<Bitmap> images = new List<Bitmap>();
+            List<SKBitmap> images = new List<SKBitmap>();
             for (int i = 0; i < cluts.Count; i++)
             {
-                Bitmap image = new Bitmap(prect.w, prect.h);
+                SKBitmap image = new SKBitmap(prect.w, prect.h);
                 int pidx = 0;
                 byte pixel = 0;
                 for (int y = 0; y < prect.h; y++)
@@ -436,7 +436,7 @@ namespace timmer
             return images.ToArray();
         }
 
-        public void Import4Bpp(Bitmap image, int clutIdx)
+        public void Import4Bpp(SKBitmap image, int clutIdx)
         {
             //int num = 0;
             //uint num2 = mask;
@@ -452,7 +452,7 @@ namespace timmer
             //    }
             //}
 
-            Bitmap toCompareTo = Export4Bpp()[clutIdx];
+            SKBitmap toCompareTo = Export4Bpp()[clutIdx];
 
             int num = 0;
             uint num2 = mask;
@@ -462,18 +462,18 @@ namespace timmer
                 {
                     byte b = pdata[num];
 
-                    Color c1 = toCompareTo.GetPixel(x, y);
-                    Color c2 = image.GetPixel(x, y);
+                    SKColor c1 = toCompareTo.GetPixel(x, y);
+                    SKColor c2 = image.GetPixel(x, y);
 
-                    if (!(c1.R == c2.R && c1.G == c2.G && c1.B == c2.B && c1.A == c2.A))
+                    if (!(c1.Red == c2.Red && c1.Green == c2.Green && c1.Blue == c2.Blue && c1.Alpha == c2.Alpha))
                     {
                         b = (byte)(b & 0xF0);
                         b |= (byte)((uint)GetClosestColor(ColorToArray(c2), clutIdx) & 0x0F);
                     }
 
-                    Color c3 = toCompareTo.GetPixel(x + 1, y);
-                    Color c4 = image.GetPixel(x + 1, y);
-                    if (!(c3.R == c4.R && c3.G == c4.G && c3.B == c4.B && c3.A == c4.A))
+                    SKColor c3 = toCompareTo.GetPixel(x + 1, y);
+                    SKColor c4 = image.GetPixel(x + 1, y);
+                    if (!(c3.Red == c4.Red && c3.Green == c4.Green && c3.Blue == c4.Blue && c3.Alpha == c4.Alpha))
                     {
                         b = (byte)(b & 0x0F);
                         b |= (byte)((GetClosestColor(ColorToArray(c4), clutIdx) & 0x0F) << 4);
@@ -484,12 +484,12 @@ namespace timmer
             }
         }
 
-        public Bitmap[] Export8Bpp()
+        public SKBitmap[] Export8Bpp()
         {
-            List<Bitmap> images = new List<Bitmap>();
+            List<SKBitmap> images = new List<SKBitmap>();
             for (int i = 0; i < cluts.Count; i++)
             {
-                Bitmap image = new Bitmap(prect.w, prect.h);
+                SKBitmap image = new SKBitmap(prect.w, prect.h);
                 int pidx = 0;
                 for (int y = 0; y < prect.h; y++)
                 {
@@ -505,9 +505,9 @@ namespace timmer
             return images.ToArray();
         }
 
-        public void Import8Bpp(Bitmap image, int clutIdx)
+        public void Import8Bpp(SKBitmap image, int clutIdx)
         {
-            Bitmap toCompareTo = Export8Bpp()[clutIdx];
+            SKBitmap toCompareTo = Export8Bpp()[clutIdx];
 
             int pidx = 0;
             for (int y = 0; y < prect.h; y++)
@@ -518,9 +518,9 @@ namespace timmer
                     {
                         int boopme = 0;
                     }
-                    Color c1 = toCompareTo.GetPixel(x, y);
-                    Color c2 = image.GetPixel(x, y);
-                    if (!(c1.R == c2.R && c1.G == c2.G && c1.B == c2.B && c1.A == c2.A))
+                    SKColor c1 = toCompareTo.GetPixel(x, y);
+                    SKColor c2 = image.GetPixel(x, y);
+                    if (!(c1.Red == c2.Red && c1.Green == c2.Green && c1.Blue == c2.Blue && c1.Alpha == c2.Alpha))
                     {
                         pdata[pidx] = (byte)GetClosestColor(ColorToArray(c2), clutIdx);
                     }
@@ -529,9 +529,9 @@ namespace timmer
             }
         }
 
-        public Bitmap[] Export16Bpp()
+        public SKBitmap[] Export16Bpp()
         {
-            Bitmap image = new Bitmap(prect.w, prect.h);
+            SKBitmap image = new SKBitmap(prect.w, prect.h);
 
             int pidx = 0;
             for (int y = 0; y < prect.h; y++)
@@ -544,10 +544,10 @@ namespace timmer
                 }
             }
 
-            return new Bitmap[] { image };
+            return new SKBitmap[] { image };
         }
 
-        public void Import16Bpp(Bitmap image)
+        public void Import16Bpp(SKBitmap image)
         {
             int pidx = 0;
             for (int y = 0; y < prect.h; y++)
@@ -561,9 +561,9 @@ namespace timmer
             }
         }
 
-        public Bitmap[] Export24Bpp()
+        public SKBitmap[] Export24Bpp()
         {
-            Bitmap image = new Bitmap(prect.w, prect.h);
+            SKBitmap image = new SKBitmap(prect.w, prect.h);
 
             int pidx = 0;
             for (int y = 0; y < prect.h; y++)
@@ -573,16 +573,16 @@ namespace timmer
                     byte r = pdata[pidx++];
                     byte g = pdata[pidx++];
                     byte b = pdata[pidx++];
-                    image.SetPixel(x, y, Color.FromArgb(r, g, b));
+                    image.SetPixel(x, y, new SKColor(r, g, b));
                 }
             }
 
-            return new Bitmap[] { image };
+            return new SKBitmap[] { image };
         }
 
         public void ExportPNG(string filename)
         {
-            Bitmap[] images = null;
+            SKBitmap[] images = null;
             if ((mode & 7) == 0)        // 4 bpp
             {
                 images = Export4Bpp();
@@ -606,13 +606,15 @@ namespace timmer
 
             if (images.Length == 1)
             {
-                images[0].Save(filename.Replace(".png", "_" + 0.ToString("D4") + ".png"), ImageFormat.Png);
+                using var ostream = File.OpenWrite(filename.Replace(".png", "_" + 0.ToString("D4") + ".png"));
+                images[0].Encode(SKEncodedImageFormat.Png, 100).SaveTo(ostream);
             }
             else
             {
                 for (int i = 0; i < images.Length; i++)
                 {
-                    images[i].Save(filename.Replace(".png", "_" + i.ToString("D4") + ".png"), ImageFormat.Png);
+                    using var ostream = File.OpenWrite(filename.Replace(".png", "_" + i.ToString("D4") + ".png"));
+                    images[i].Encode(SKEncodedImageFormat.Png, 100);
                 }
             }
         }
@@ -622,16 +624,16 @@ namespace timmer
             if ((mode & 7) == 0)        // 4 bpp
             {
                 int clutIdx = GetCLUTIndex(filename);
-                Import4Bpp(new Bitmap(filename), clutIdx);
+                Import4Bpp(SKBitmap.Decode(filename), clutIdx);
             }
             else if ((mode & 7) == 1)   // 8 bpp
             {
                 int clutIdx = GetCLUTIndex(filename);
-                Import8Bpp(new Bitmap(filename), clutIdx);
+                Import8Bpp(SKBitmap.Decode(filename), clutIdx);
             }
             else if ((mode & 7) == 2)   // 16 bpp
             {
-                Import16Bpp(new Bitmap(filename));
+                Import16Bpp(SKBitmap.Decode(filename));
             }
             else if ((mode & 7) == 3)   // 24 bpp
             {
