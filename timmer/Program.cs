@@ -179,23 +179,23 @@ namespace timmer
                     }
                     else
                     {
-                        outfilenames.Add(infilename);
+                        outfilenames.Add(outfilename);
                     }
                     List<string> graphicsToInsert = new List<string>();
                     for (int j = 0; j < outfilenames.Count; j++)
                     {
                         try
                         {
-                            string text = outfilenames[j];
+                            string text = outfilenames[j].ToLower();
                             FileInfo fileInfo = new FileInfo(text.Replace(new Regex(".([^.]+).png").Match(text).Value, ""));
                             if (!graphicsToInsert.Contains(fileInfo.Name))
                             {
                                 graphicsToInsert.Add(fileInfo.Name);
                             }
                         }
-                        catch
+                        catch (Exception e)
                         {
-                            Console.WriteLine("Graphics insertion for " + outfilenames[j] + " not supported.");
+                            Console.WriteLine("Exception when writing to  " + outfilenames[j] + ": " + e);
                         }
                     }
                     foreach (string file in infilenames)
