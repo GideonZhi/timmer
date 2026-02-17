@@ -186,9 +186,9 @@ namespace timmer
                     {
                         try
                         {
-                            string text = outfilenames[j].ToLower();
+                            string text = outfilenames[j];
                             FileInfo fileInfo = new FileInfo(text.Replace(new Regex(".([^.]+).png").Match(text).Value, ""));
-                            if (!graphicsToInsert.Contains(fileInfo.Name))
+                            if (!graphicsToInsert.Contains(fileInfo.Name, StringComparer.OrdinalIgnoreCase))
                             {
                                 graphicsToInsert.Add(fileInfo.Name);
                             }
@@ -201,14 +201,15 @@ namespace timmer
                     foreach (string file in infilenames)
                     {
                         FileInfo fi = new FileInfo(file);
-                        if (graphicsToInsert.Contains(fi.Name))
+                        if (graphicsToInsert.Contains(fi.Name, StringComparer.OrdinalIgnoreCase))
                         {
 
                             Console.WriteLine("Updating " + file + "...");
 
                             List<uint> timPositions = new List<uint>();
                             BinaryReader br = new BinaryReader(File.OpenRead(file));
-                            while (br.BaseStream.Position + 8 < br.BaseStream.Length)
+                            long brLength = br.BaseStream.Length;
+                            while (br.BaseStream.Position + 8 < brLength)
                             {
                                 uint magicId = br.ReadUInt32();
                                 uint mode = br.ReadUInt32();
@@ -225,7 +226,7 @@ namespace timmer
                                 uint timPos = timPositions[k];
 
                                 string graphicFilename = new FileInfo(file).Name + "." + k.ToString("D4");
-                                string graphicFilenameToInsert = outfilenames.Where((string x) => x.Contains(graphicFilename)).FirstOrDefault();
+                                string graphicFilenameToInsert = outfilenames.FirstOrDefault((string x) => x.Contains(graphicFilename, StringComparison.OrdinalIgnoreCase));
                                 if (!string.IsNullOrEmpty(graphicFilenameToInsert))
                                 {
                                     Console.WriteLine("Inserting image " + graphicFilenameToInsert + "...");
