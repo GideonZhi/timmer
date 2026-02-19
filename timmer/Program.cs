@@ -121,7 +121,8 @@ namespace timmer
 
                         List<uint> timPositions = new List<uint>();
                         BinaryReader br = new BinaryReader(File.OpenRead(item));
-                        while (br.BaseStream.Position + 8 < br.BaseStream.Length)
+                        long brLength = br.BaseStream.Length;
+                        while (br.BaseStream.Position + 8 < brLength)
                         {
                             uint magicId = br.ReadUInt32();
                             uint mode = br.ReadUInt32();
@@ -242,8 +243,9 @@ namespace timmer
                                             aTim = tim,
                                         });
                                     }
-                                    catch
+                                    catch (Exception e)
                                     {
+                                        Console.WriteLine(e);
                                     }
                                 }
                             }
