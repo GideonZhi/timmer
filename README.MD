@@ -1,5 +1,7 @@
 # TIMMER
 
+NOTE: Experimental fork/abandoned.
+
 Commandline TIM processing utility, forked from https://github.com/Eight-Mansions/timmer
 
 Changelog:
